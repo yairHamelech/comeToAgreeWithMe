@@ -1,38 +1,45 @@
-// Establish a connection to the server
-const socket = io();
-
-// Function to send a message to the server
-function sendMessage() {
-  // Get the message input value
-  const message = document.getElementById("messageInput").value;
-
-  // Emit the message to the server
-  socket.emit("private message", message, "recipientId");
-
-  // Display the sent message in the chat interface
-  displayMessage("You: " + message);
-
-  // Clear the message input field
-  document.getElementById("messageInput").value = "";
+var user = cookie.get("user");
+if (!user) {
+  // Ask for the username if there is none set already
+  user = prompt("Choose a username:");
+  if (!user) {
+    alert("We cannot work with you like that!");
+  } else {
+    // Store it in the cookies for future use
+    cookie.set("user", user);
+  }
 }
 
-// Handle incoming messages from the server
-socket.on("private message", (msg) => {
-  // Display the received message in the chat interface
-  displayMessage("Friend: " + msg);
+var socket = io();
+
+// The user count. Can change when someone joins/leaves
+socket.on("count", function (data) {
+  $(".user-count").html(data);
 });
 
-// Function to display a message in the chat interface
-function displayMessage(message) {
-  // Create a new message element
-  const messageElement = document.createElement("div");
+// When we receive a message
+// it will be like { user: 'username', message: 'text' }
+socket.on("message", function (data) {
+  $(".chat").append(
+    "<p><strong>" + data.user + "</strong>: " + data.message + "</p>"
+  );
+});
 
-  // Set the text content of the message element
-  messageElement.textContent = message;
+// When the form is submitted
+$("form").submit(function (e) {
+  // Avoid submitting it through HTTP
+  e.preventDefault();
 
-  // Get the messages div
-  const messagesDiv = document.getElementById("messages");
+  // Retrieve the message from the user
+  var message = $(e.target).find("input").val();
 
-  // Append the message element to the messages div
-  messagesDiv.appendChild(messageElement);
-}
+  // Send the message to the server
+  socket.emit("message", {
+    user: cookie.get("user") || "Anonymous",
+    message: message,
+  });
+
+  // Clear the input and focus it for a new message
+  e.target.reset();
+  $(e.target).find("input").focus();
+});
